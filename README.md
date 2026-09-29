@@ -1,5 +1,9 @@
 # Sound Sniffer
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+
 浏览器音频流嗅探器。接管一个 Chrome 实例，监听它的网络请求，把所有音频类型的响应列出来，点一下存成本地文件。
 
 老牌插件 Sound Pirate（声海盗）被下架后的本地复刻版 —— 同样的原理，自己掌控。
@@ -8,7 +12,17 @@
 
 ## 快速开始
 
-1. 双击 `start.bat`
+**从 GitHub 拿代码**：
+
+```bash
+git clone https://github.com/Suda0315/sound-sniffer.git
+cd sound-sniffer
+pip install -r requirements.txt
+```
+
+**跑起来**：
+
+1. 双击 `start.bat`（Windows），或 `python app.py`
 2. 会自动弹出一个受控 Chrome 窗口 + 控制面板网页
 3. 两条路，挑一条：
    - **嗅探**：在受控 Chrome 里打开网页、点播放 → 音频流自己冒出来 → 点「保存」
