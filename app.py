@@ -33,7 +33,6 @@ BASE = Path(__file__).resolve().parent
 DOWNLOADS = BASE / "downloads"
 STATIC = BASE / "static"
 PROFILE = BASE / ".chrome-profile"
-DOWNLOADS.mkdir(exist_ok=True)
 
 PORT_START = 8765
 
@@ -158,6 +157,9 @@ if _dl:
         DOWNLOADS = _p
     except Exception as e:
         print(f"[warn] 配置的下载目录不可用，回退到项目内 downloads/：{e}")
+        DOWNLOADS.mkdir(parents=True, exist_ok=True)
+else:
+    DOWNLOADS.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------- 类型判定
 AUDIO_EXT = {
