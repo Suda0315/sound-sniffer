@@ -28,7 +28,16 @@ pip install -r requirements.txt
    - **嗅探**：在受控 Chrome 里打开网页、点播放 → 音频流自己冒出来 → 点「保存」
    - **链接**：把页面链接粘到控制面板顶部输入框、回车 → 走 yt-dlp
 
-文件都落在 `downloads/` 目录。
+文件默认落在项目内的 `downloads/`。想改地方（比如放到桌面）就编辑 `config.json`，加一行：
+
+```json
+{
+  "proxy": "http://127.0.0.1:7897",
+  "download_dir": "C:\\Users\\你的用户名\\Desktop\\Sound Sniffer"
+}
+```
+
+目录不存在会自动建。控制面板上的「打开文件夹」按钮会跳到你配的那个目录。
 
 ---
 
@@ -112,7 +121,7 @@ sound-sniffer/
 ├── static/
 │   ├── index.html      # 控制面板
 │   └── guide.html      # 受控浏览器启动时打开的说明页
-├── downloads/          # 存下来的音频
+├── downloads/          # 存下来的音频（默认位置，可在 config.json 里改）
 ├── bin/
 │   └── yt-dlp.exe     # 自带的独立版，优先使用
 ├── config.json         # 代理等设置（自动生成）

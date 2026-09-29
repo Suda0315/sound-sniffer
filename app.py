@@ -149,6 +149,16 @@ def _save_config(cfg: dict) -> None:
 
 CONFIG = _load_config()
 
+# 下载目录：config.json 里配了 download_dir 就用配的，否则用项目下的 downloads/
+_dl = str(CONFIG.get("download_dir") or "").strip()
+if _dl:
+    try:
+        _p = Path(_dl).expanduser().resolve()
+        _p.mkdir(parents=True, exist_ok=True)
+        DOWNLOADS = _p
+    except Exception as e:
+        print(f"[warn] 配置的下载目录不可用，回退到项目内 downloads/：{e}")
+
 # ---------------------------------------------------------------- 类型判定
 AUDIO_EXT = {
     "mp3", "m4a", "aac", "flac", "wav", "ogg", "oga", "opus",
