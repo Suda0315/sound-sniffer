@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Sniffer · 音频嗅探器</title>
+<style>
+:root{
+  --bg:#ffffff; --surface:#f7f7f5; --line:#e5e3dd; --line2:#d3d1c7;
+  --text:#2c2c2a; --muted:#5f5e5a; --hint:#888780;
+  --ok:#3b6d11; --okbg:#eaf3de; --warn:#854f0b; --warnbg:#faeeda;
+  --err:#a32d2d; --errbg:#fcebeb; --acc:#185fa5; --accbg:#e6f1fb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:17px;font-weight:500;margin:0}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:12px 14px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;margin:16px 0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--hint);flex:none}
+.dot.on{background:#639922}.dot.off{background:#e24b4a}.dot.wait{background:#ef9f27}
+.tag{font-size:12px;padding:3px 9px;border-radius:99px;background:#fff;
+  border:1px solid var(--line2);color:var(--muted)}
+.tag.ok{background:var(--okbg);border-color:#c0dd97;color:var(--ok)}
+.tag.warn{background:var(--warnbg);border-color:#fac775;color:var(--warn)}
+.tag.err{background:var(--errbg);border-color:#f7c1c1;color:var(--err)}
+button{font:inherit;font-size:13px;padding:6px 13px;border-radius:8px;
+  border:1px solid var(--line2);background:#fff;color:var(--text);cursor:pointer}
+button:hover{border-color:var(--acc);color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.pri:hover{background:#0c447c;color:#fff}
+button:disabled{opacity:.45;cursor:default;border-color:var(--line2);color:var(--muted)}
+.spacer{flex:1}
+input[type=search],input[type=text]{font:inherit;font-size:13px;padding:6px 11px;
+  border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--text);width:260px}
+label.sw{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+.empty{padding:44px 20px;text-align:center;color:var(--hint);font-size:13px;
+  border:1px dashed var(--line2);border-radius:12px;margin-top:16px}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;
+  border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff}
+.row:hover{border-color:var(--line2)}
+.kind{font-size:11px;font-weight:500;padding:2px 8px;border-radius:6px;
+  background:var(--accbg);color:var(--acc);flex:none;margin-top:2px}
+.kind.hls{background:var(--warnbg);color:var(--warn)}
+.main{flex:1;min-width:0}
+.name{font-size:13px;font-weight:500;word-break:break-all}
+.meta{font-size:12px;color:var(--hint);margin-top:3px;word-break:break-all}
+.acts{display:flex;gap:8px;flex:none}
+h2{font-size:14px;font-weight:500;margin:26px 0 12px;color:var(--muted)}
+.pbar{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;background:var(--acc);width:0}
+.jrow{display:flex;gap:10px;align-items:center;font-size:13px;padding:9px 14px;
+  border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface)}
+.jname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tip{background:var(--warnbg);border:1px solid #fac775;color:var(--warn);
+  padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.tip b{font-weight:500}
+#url{flex:1;min-width:220px;width:auto}
+#proxy{width:190px}
+.jnote{font-size:12px;color:var(--hint);margin-top:2px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sound Sniffer</h1>
+  <div class="sub">在受控的 Chrome 窗口里播放音频，这里会实时列出抓到的音频流，点一下就存到本地。</div>
+
+  <div class="bar">
+    <span class="dot" id="bdot"></span><span class="tag" id="btag">浏览器连接中…</span>
+    <span class="tag" id="ftag">ffmpeg 检测中…</span>
+    <span class="tag" id="ytag">yt-dlp 检测中…</span>
+    <span class="spacer"></span>
+    <label class="sw"><input type="checkbox" id="mp3"> 统一转成 mp3</label>
+    <input type="search" id="q" placeholder="过滤 URL 或站点…">
+    <button id="clear">清空列表</button>
+    <button id="folder">打开保存目录</button>
+  </div>
+
+  <div class="bar">
+    <input type="text" id="url" placeholder="粘贴 YouTube / B站 / 播客 链接，回车即抓">
+    <button class="pri" id="go">抓取链接</button>
+    <span class="spacer"></span>
+    <input type="text" id="proxy" placeholder="代理（可选）http://127.0.0.1:7890">
+  </div>
+
+  <div class="tip" id="tip" style="display:none"></div>
+
+  <h2 id="tcount">抓到的音频流</h2>
+  <div id="list"></div>
+
+  <h2>下载任务</h2>
+  <div id="jobs"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let tracks = [], jobs = [], sites = [], mp3 = false, filter = '';
+
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function host(u){try{return new URL(u).hostname;}catch(e){return u;}}
+function base(u){try{const p=decodeURIComponent(new URL(u).pathname);const f=p.split('/').pop();return f||host(u);}catch(e){return u;}}
+function sz(n){if(!n)return '';n=+n;const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<3){n/=1024;i++;}return n.toFixed(i?1:0)+u[i];}
+function ago(t){const d=Date.now()/1000-t;if(d<60)return '刚刚';if(d<3600)return Math.floor(d/60)+' 分钟前';return Math.floor(d/3600)+' 小时前';}
+
+function setBrowser(s){
+  const dot=$('#bdot'), tag=$('#btag');
+  dot.className='dot '+(s.startsWith('connected')?'on':s.startsWith('error')?'off':'wait');
+  tag.className='tag '+(s.startsWith('connected')?'ok':s.startsWith('error')?'err':'warn');
+  tag.textContent = s.startsWith('connected') ? ('浏览器已接管 · '+s.split(':')[1]) : s;
+}
+function setYtdlp(ok,path){
+  const tag=$('#ytag');
+  tag.className='tag '+(ok?'ok':'warn');
+  tag.textContent = ok ? 'yt-dlp 可用' : 'yt-dlp 未找到';
+  tag.title = path || '执行 pip install yt-dlp';
+}
+
+function setFfmpeg(ok,path){
+  const tag=$('#ftag');
+  tag.className='tag '+(ok?'ok':'warn');
+  tag.textContent = ok ? 'ffmpeg 可用' : 'ffmpeg 未找到（m3u8 无法处理）';
+  tag.title = path || '';
+}
+
+function renderList(){
+  const rows = tracks.filter(t=>{
+    if(!filter) return true;
+    return (t.url+' '+t.page+' '+t.title).toLowerCase().includes(filter);
+  });
+  $('#tcount').textContent = '抓到的音频流 · ' + rows.length;
+  if(!rows.length){
+    $('#list').innerHTML = '<div class="empty">'+(tracks.length?'没有匹配项':'还没有抓到音频。<br>在受控 Chrome 窗口里打开网页并点播放，音频流会出现在这里。')+'</div>';
+    return;
+  }
+  $('#list').innerHTML = rows.map(t=>{
+    const busy = jobs.some(j=>j.track===t.id && ['queued','downloading','converting'].includes(j.status));
+    return '<div class="row">'
+      + '<span class="kind'+(t.kind==='hls'?' hls':'')+'">'+(t.kind==='hls'?'HLS':t.ext.toUpperCase())+'</span>'
+      + '<div class="main">'
+      + '<div class="name">'+esc(base(t.url))+'</div>'
+      + '<div class="meta">'+esc(host(t.url))+' · '+sz(t.size)+(t.hits>1?' · 命中 '+t.hits+' 次':'')+' · '+ago(t.first_seen)+'</div>'
+      + '<div class="meta mono">'+esc(t.url.length>140?t.url.slice(0,140)+'…':t.url)+'</div>'
+      + '</div>'
+      + '<div class="acts"><button class="pri" data-dl="'+t.id+'"'+(busy?' disabled':'')+'>'+(busy?'进行中':'保存')+'</button></div>'
+      + '</div>';
+  }).join('');
+  $('#list').querySelectorAll('[data-dl]').forEach(b=>{
+    b.onclick = ()=>{ b.disabled=true; b.textContent='队列中';
+      fetch('/api/download/'+b.dataset.dl+'?to_mp3='+(mp3?1:0),{method:'POST'}); };
+  });
+}
+
+function renderJobs(){
+  if(!jobs.length){ $('#jobs').innerHTML='<div class="empty">暂无下载任务</div>'; return; }
+  $('#jobs').innerHTML = jobs.map(j=>{
+    const t = tracks.find(x=>x.id===j.track);
+    let name = j.file;
+    if(!name) name = j.kind==='fetch' ? (j.url||'') : (t?base(t.url):j.track);
+    let right='',bar='',note='';
+    if(j.status==='done'){ right='<span class="tag ok">完成 '+sz(j.size)+'</span>'; }
+    else if(j.status==='error'){ right='<span class="tag err">失败</span>'; note=esc(j.error); }
+    else if(j.status==='converting'){ right='<span class="tag warn">转码中</span>'; }
+    else if(j.status==='downloading'){
+      const p = j.kind==='fetch' ? (j.percent||0) : (j.total? Math.min(100, j.bytes/j.total*100) : 0);
+      right = j.kind==='fetch' ? '<span class="tag">'+p.toFixed(0)+'%</span>'
+        : '<span class="tag">'+sz(j.bytes)+(j.total?' / '+sz(j.total):'')+'</span>';
+      if(j.kind==='fetch') note = esc(j.note);
+      bar = '<div class="pbar"><i style="width:'+p+'%"></i></div>';
+    } else { right='<span class="tag">排队</span>'; }
+    const src = j.kind==='fetch' ? '<span class="kind">链接</span>' : '';
+    return '<div class="jrow">'+src+'<span class="jname">'+esc(name)+'</span>'+right+'</div>'
+      + (bar?'<div style="margin:-2px 0 8px">'+bar+'</div>':'')
+      + (note?'<div class="jnote" style="margin:-2px 0 10px">'+note+'</div>':'');
+  }).join('');
+}
+
+const SPLIT = ['youtube.com','youtu.be','music.youtube.com','bilibili.com','vimeo.com','x.com','twitter.com'];
+function renderTip(){
+  const hit = (sites||[]).filter(s=>SPLIT.some(k=>s===k||s.endsWith('.'+k)));
+  const el = $('#tip');
+  if(!hit.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = '<b>'+esc(hit.join('、'))+'</b> 这类站点用分片方式加载音频，'
+    + '浏览器嗅探只能看到几秒一段的碎片 —— 把页面链接粘到上面的输入框，走 yt-dlp 通道。';
+}
+
+async function poll(){
+  try{
+    const r = await fetch('/api/state'); const d = await r.json();
+    setBrowser(d.browser); setFfmpeg(d.ffmpeg, d.ffmpeg_path); setYtdlp(d.ytdlp, d.ytdlp_path);
+    tracks = d.tracks; jobs = d.jobs; sites = d.sites || [];
+    if(document.activeElement !== $('#proxy')) $('#proxy').value = (d.config||{}).proxy || '';
+    renderTip(); renderList(); renderJobs();
+  }catch(e){
+    setBrowser('error: 无法连接本地服务');
+  }
+}
+
+$('#mp3').onchange = e => { mp3 = e.target.checked; };
+$('#q').oninput = e => { filter = e.target.value.trim().toLowerCase(); renderList(); };
+$('#clear').onclick = ()=>{ fetch('/api/clear',{method:'POST'}); tracks=[]; renderList(); };
+$('#folder').onclick = ()=>{ fetch('/api/open-folder',{method:'POST'}); };
+
+function doFetch(){
+  const v = $('#url').value.trim();
+  if(!v) return;
+  fetch('/api/fetch',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({url:v, to_mp3: mp3})});
+  $('#url').value='';
+}
+$('#go').onclick = doFetch;
+$('#url').onkeydown = e => { if(e.key==='Enter') doFetch(); };
+$('#proxy').onchange = e => {
+  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({proxy:e.target.value.trim()})});
+};
+
+poll(); setInterval(poll, 1200);
+</script>
+</body>
+</html>
